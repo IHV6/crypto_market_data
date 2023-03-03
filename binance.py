@@ -1,6 +1,7 @@
 import requests
 import threading
 import matplotlib.pyplot as plt
+import matplotlib as mpl
 from datetime import datetime
 
 
@@ -25,6 +26,9 @@ def create_plot():
     global ax
     fig = plt.figure()
     ax = fig.add_subplot(1, 1, 1)
+    fig.patch.set_facecolor('black')
+    fig.patch.set_alpha(1.0)
+    mpl.style.use(['dark_background'])
     graph = []
     date_time = []
 
@@ -33,14 +37,16 @@ def get_graph(price, date, symbol):
     graph.append(float(price))
     date_time.append(date)
     ax.clear()
-    ax.plot(date_time, graph)
+    ax.plot(date_time, graph, 'o-r')
+    ax.patch.set_facecolor('orange')
+    ax.patch.set_alpha(1.0)
     plt.xticks(rotation=45, ha='right')
     plt.subplots_adjust(bottom=0.30)
-    plt.title(f'{symbol} Price history')
+    plt.title(f'{symbol[0]} to {symbol[1]} Price History')
     plt.ylabel('Price')
     plt.xlabel('Time')
     plt.draw()
-    plt.pause(15)
+    plt.pause(30)
 
 
 def run():
@@ -49,6 +55,7 @@ def run():
     print(f'Actual {symbol[0]} price for {symbol[1]} at '
           f'({datetime.now().strftime("%Y-%m-%d %H:%M:%S")}):', f'{float(price):,}')
     create_plot()
+    get_graph(price, datetime.now().strftime("%Y-%m-%d %H:%M:%S"), symbol)
 
     def recursion(price):
         new_price = get_price(symbol)
@@ -61,7 +68,7 @@ def run():
                 price = new_price
                 print("\U0001F534", f'Actual {symbol[0]} price for {symbol[1]} at '
                                     f'({datetime.now().strftime("%Y-%m-%d %H:%M:%S")}):', f'{float(price):,}')
-        get_graph(price, datetime.now().strftime("%Y-%m-%d %H:%M:%S"), symbol[0])
+            get_graph(price, datetime.now().strftime("%Y-%m-%d %H:%M:%S"), symbol)
         threading.Timer(15, recursion(price)).start()
     recursion(price)
 
