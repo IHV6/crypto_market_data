@@ -1,34 +1,76 @@
 import requests
 import threading
+import matplotlib.pyplot as plt
+import matplotlib as mpl
 from datetime import datetime
 
 
-crypto = input('Crypto name: ')
-fiat = input('Fiat name: ')
-symbol = crypto + fiat
+def get_inputs():
+    return input('Crypto name: ').upper().rstrip().strip(), input('Fiat name: ').upper().rstrip().strip()
 
 
-def get_data():
-    r = requests.get(f'https://api.binance.com/api/v3/avgPrice?symbol={symbol}')
-    return r.json()
+def get_price(symbol):
+    crypto_and_fiat = symbol[0] + symbol[1]
+    r = requests.get(f'https://api.binance.com/api/v3/avgPrice?symbol={crypto_and_fiat}')
+    response = r.json()
+    try:
+        return response['price']
+    except KeyError:
+        print("Wrong input data. Try one more time.")
+        run()
 
 
-def get_price():
-    response = get_data()
-    return response['price']
+def create_plot():
+    global graph
+    global date_time
+    global ax
+    fig = plt.figure()
+    ax = fig.add_subplot(1, 1, 1)
+    fig.patch.set_facecolor('black')
+    fig.patch.set_alpha(1.0)
+    mpl.style.use(['dark_background'])
+    graph = []
+    date_time = []
 
 
-price = get_price()
-print(f'Actual price ({datetime.now().strftime("%Y-%m-%d %H:%M:%S")}):', price)
+def get_graph(price, date, symbol):
+    graph.append(float(price))
+    date_time.append(date)
+    ax.clear()
+    ax.plot(date_time, graph, 'o-r')
+    ax.patch.set_facecolor('orange')
+    ax.patch.set_alpha(1.0)
+    plt.xticks(rotation=45, ha='right')
+    plt.subplots_adjust(bottom=0.30)
+    plt.title(f'{symbol[0]} to {symbol[1]} Price History')
+    plt.ylabel('Price')
+    plt.xlabel('Time')
+    plt.draw()
+    plt.pause(30)
 
 
 def run():
-    global price
-    new_price = get_price()
-    if price != new_price:
-        price = new_price
-        print(f'Actual price ({datetime.now().strftime("%Y-%m-%d %H:%M:%S")}):', price)
-    threading.Timer(30, run).start()
+    symbol = get_inputs()
+    price = get_price(symbol)
+    print(f'Actual {symbol[0]} price for {symbol[1]} at '
+          f'({datetime.now().strftime("%Y-%m-%d %H:%M:%S")}):', f'{float(price):,}')
+    create_plot()
+    get_graph(price, datetime.now().strftime("%Y-%m-%d %H:%M:%S"), symbol)
+
+    def recursion(price):
+        new_price = get_price(symbol)
+        if price != new_price:
+            if new_price > price:
+                price = new_price
+                print("\U0001F7E2", f'Actual {symbol[0]} price for {symbol[1]} at '
+                                    f'({datetime.now().strftime("%Y-%m-%d %H:%M:%S")}):', f'{float(price):,}')
+            else:
+                price = new_price
+                print("\U0001F534", f'Actual {symbol[0]} price for {symbol[1]} at '
+                                    f'({datetime.now().strftime("%Y-%m-%d %H:%M:%S")}):', f'{float(price):,}')
+            get_graph(price, datetime.now().strftime("%Y-%m-%d %H:%M:%S"), symbol)
+        threading.Timer(15, recursion(price)).start()
+    recursion(price)
 
 
 run()
